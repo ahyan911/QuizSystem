@@ -1,404 +1,235 @@
-import tkinter as tk  # Import Tkinter library for creating the GUI
-from tkinter import messagebox  # Import messagebox to show pop-up messages (like correct or incorrect answers)
+import random
+import tkinter as tk                  # Tkinter is Python's built-in library for making windows
+from tkinter import messagebox         # messagebox shows popup alerts (Correct/Wrong)
 
 # -----------------------------
-# Question Bank (Contains all questions and options)
+# Question Bank (grouped by difficulty)
 # -----------------------------
+# Each difficulty has its own list of (question, correct_answer) pairs.
 question_bank = {
     "easy": [
-        {
-            "question": "What is the capital of France?",  # The question text
-            "options": ["A. Berlin", "B. Paris", "C. Madrid", "D. Rome"],  # List of answer choices
-            "answer": "B",  # The correct answer
-            "topic": "Geography"  # Topic of the question
-        },
-        {
-            "question": "Which number is even?",  # Another question
-            "options": ["A. 7", "B. 9", "C. 12", "D. 15"],
-            "answer": "C",
-            "topic": "Math"
-        },
-        {
-            "question": "Python is a _____.",
-            "options": ["A. Programming Language", "B. Snake only", "C. Game", "D. Browser"],
-            "answer": "A",
-            "topic": "Programming"
-        }
+        ("1. What is the capital of Pakistan?\nA) Lahore\nB) Karachi\nC) Islamabad\nD) Peshawar", "C"),
+        ("2. 2 + 2 = ?\nA) 3\nB) 4\nC) 5\nD) 6", "B"),
+        ("3. Which color is a primary color?\nA) Green\nB) Orange\nC) Red\nD) Purple", "C"),
     ],
     "medium": [
-        {
-            "question": "Which keyword is used to define a function in Python?",
-            "options": ["A. function", "B. def", "C. fun", "D. define"],
-            "answer": "B",
-            "topic": "Programming"
-        },
-        {
-            "question": "What is 15 * 3?",
-            "options": ["A. 30", "B. 35", "C. 45", "D. 50"],
-            "answer": "C",
-            "topic": "Math"
-        },
-        {
-            "question": "Which planet is known as the Red Planet?",
-            "options": ["A. Venus", "B. Earth", "C. Jupiter", "D. Mars"],
-            "answer": "D",
-            "topic": "Science"
-        }
+        ("1. Which language is used for AI?\nA) Python\nB) HTML\nC) CSS\nD) Java", "A"),
+        ("2. 12 x 5 = ?\nA) 55\nB) 60\nC) 65\nD) 70", "B"),
+        ("3. Which planet is known as the Red Planet?\nA) Venus\nB) Earth\nC) Jupiter\nD) Mars", "D"),
     ],
     "hard": [
-        {
-            "question": "Which data structure uses FIFO order?",
-            "options": ["A. Stack", "B. Queue", "C. Tree", "D. Graph"],
-            "answer": "B",
-            "topic": "Programming"
-        },
-        {
-            "question": "What is the square root of 144?",
-            "options": ["A. 10", "B. 11", "C. 12", "D. 14"],
-            "answer": "C",
-            "topic": "Math"
-        },
-        {
-            "question": "Which gas is most abundant in Earth's atmosphere?",
-            "options": ["A. Oxygen", "B. Carbon Dioxide", "C. Nitrogen", "D. Hydrogen"],
-            "answer": "C",
-            "topic": "Science"
-        }
-    ]
+        ("1. Which data structure uses FIFO order?\nA) Stack\nB) Queue\nC) Tree\nD) Graph", "B"),
+        ("2. Square root of 144 = ?\nA) 10\nB) 11\nC) 12\nD) 14", "C"),
+        ("3. Which gas is most abundant in Earth's atmosphere?\nA) Oxygen\nB) CO2\nC) Nitrogen\nD) Hydrogen", "C"),
+    ],
 }
 
-# -----------------------------
-# Global Tracking Variables
-# -----------------------------
-last_score = -1  # Stores the last score
-last_total = 0  # Stores total number of questions in the last quiz
-last_correct = 0  # Stores the number of correct answers
-last_wrong = 0  # Stores the number of incorrect answers
-last_level = ""  # Stores the user's performance level (Beginner, Intermediate, Advanced)
-last_topic_stats = {}  # Stores statistics about each topic (correct and incorrect answers)
-quiz_attempted = False  # Boolean to check if the user has attempted the quiz
+last_score = 0
+last_difficulty = ""       # remembers what difficulty the last quiz used
 
-# These variables store the current quiz's data while it is being taken
-current_questions = []  # List of questions for the current quiz
-current_index = 0  # Keeps track of which question the user is on
-current_score = 0  # Keeps track of the user's score
-current_correct = 0  # Tracks correct answers
-current_wrong = 0  # Tracks incorrect answers
-current_topic_stats = {}  # Tracks statistics for each topic in the quiz
-current_difficulty = ""  # Stores the difficulty level of the current quiz (easy, medium, hard)
-
-# -----------------------------
-# Helper Functions (unchanged)
-# -----------------------------
-def get_performance_level(percentage):
-    """Classifies performance based on score percentage."""
-    if percentage >= 80:  # If the score is 80% or above, the performance level is "Advanced"
-        return "Advanced"
-    elif percentage >= 50:  # If the score is between 50% and 79%, the performance level is "Intermediate"
-        return "Intermediate"
-    else:  # If the score is below 50%, the performance level is "Beginner"
-        return "Beginner"
-
-
-def get_feedback(level, percentage, weak_topics):
-    """Generates feedback based on the performance level and weak topics."""
-    if level == "Advanced":
-        message = "Excellent work! You have a strong understanding of the quiz topics."
-    elif level == "Intermediate":
-        message = "Good effort! You understand many concepts, but there is room for improvement."
-    else:
-        message = "You need more practice. Focus on basics and revise weak areas."
-
-    if len(weak_topics) > 0:
-        message += "\nWeak areas: " + ", ".join(weak_topics)  # Lists weak topics
-
-    if percentage == 100:
-        message += "\nPerfect score. Outstanding performance!"  # If the user gets a perfect score
-    elif percentage < 40:
-        message += "\nSuggestion: Practice easier questions first and build confidence."  # If the score is low
-
-    return message
+# Variables that hold the quiz while it is running
+current_combined = []       # shuffled list of (question, correct_answer) pairs
+current_index = 0           # which question we're on
+current_score = 0           # running score for the active quiz
+current_difficulty = ""     # which difficulty was picked this round
 
 
 # -----------------------------
 # Helper: clear the window before showing a new screen
 # -----------------------------
 def clear_window():
-    """Clears all widgets from the Tkinter window."""
     for widget in window.winfo_children():
-        widget.destroy()  # Destroys each widget (label, button, etc.) in the current window
+        widget.destroy()
 
 
-# =========================================================
-# SCREEN: Main Menu  (replaces the console main menu)
-# =========================================================
+# -----------------------------
+# SCREEN: Main Menu
+# -----------------------------
 def show_menu():
-    """Displays the main menu with options to start quiz, view last score, and analyze performance."""
     clear_window()
 
-    # Title of the app
-    tk.Label(window, text="Smart Quiz & Performance Analyzer",
+    tk.Label(window, text="===== QUIZ SYSTEM =====",
              font=("Arial", 16, "bold")).pack(pady=20)
 
-    # Buttons for the main menu
     tk.Button(window, text="1. Start Quiz", width=30, height=2,
-              bg="#4CAF50", fg="white", command=choose_difficulty).pack(pady=5)
+              command=choose_difficulty).pack(pady=5)
 
     tk.Button(window, text="2. View Last Score", width=30, height=2,
-              bg="#2196F3", fg="white", command=view_last_score).pack(pady=5)
+              command=view_last_score).pack(pady=5)
 
     tk.Button(window, text="3. Performance Analysis", width=30, height=2,
-              bg="#FF9800", fg="black", command=performance_analysis).pack(pady=5)
+              command=performance_analysis).pack(pady=5)
 
     tk.Button(window, text="4. Exit", width=30, height=2,
-              bg="#f44336", fg="white", command=window.destroy).pack(pady=5)
+              command=window.destroy).pack(pady=5)
 
 
-# =========================================================
-# SCREEN: Choose Difficulty  (replaces choose_difficulty console prompt)
-# =========================================================
+# -----------------------------
+# SCREEN: Choose Difficulty  (Custom Feature: difficulty levels ✅)
+# -----------------------------
 def choose_difficulty():
-    """Displays the difficulty level selection screen."""
     clear_window()
 
     tk.Label(window, text="Select Difficulty Level",
              font=("Arial", 16, "bold")).pack(pady=20)
 
-    # Buttons to select difficulty level
     tk.Button(window, text="1. Easy", width=30, height=2,
-              bg="#4CAF50", fg="white", command=lambda: start_quiz("easy")).pack(pady=5)
+              command=lambda: start_quiz("easy")).pack(pady=5)
 
     tk.Button(window, text="2. Medium", width=30, height=2,
-              bg="#2196F3", fg="white", command=lambda: start_quiz("medium")).pack(pady=5)
+              command=lambda: start_quiz("medium")).pack(pady=5)
 
     tk.Button(window, text="3. Hard", width=30, height=2,
-              bg="#FF9800", fg="black", command=lambda: start_quiz("hard")).pack(pady=5)
+              command=lambda: start_quiz("hard")).pack(pady=5)
 
-    # Button to return to the main menu
     tk.Button(window, text="Back to Menu", width=30,
-              bg="#f44336", fg="white", command=show_menu).pack(pady=15)
+              command=show_menu).pack(pady=15)
 
 
-# =========================================================
-# Core Feature: start_quiz  (same logic, just uses windows)
-# =========================================================
+# -----------------------------
+# start_quiz — resets everything and picks the right question list
+# -----------------------------
 def start_quiz(difficulty):
-    """Starts the quiz based on the chosen difficulty."""
-    global current_questions, current_index, current_score
-    global current_correct, current_wrong, current_topic_stats, current_difficulty
+    global current_combined, current_index, current_score, current_difficulty
 
     current_difficulty = difficulty
-    current_questions = question_bank[difficulty]
-    current_index = 0
     current_score = 0
-    current_correct = 0
-    current_wrong = 0
-    current_topic_stats = {}
 
-    # Initialize topic tracking  (same as original)
-    for q in current_questions:
-        topic = q["topic"]
-        if topic not in current_topic_stats:
-            current_topic_stats[topic] = {"correct": 0, "wrong": 0}
+    # Randomize questions (Custom Feature 1 ✅)
+    current_combined = list(question_bank[difficulty])
+    random.shuffle(current_combined)
 
-    ask_question()
+    current_index = 0
+    show_question()
 
 
-# =========================================================
-# Replaces: ask_question() from the console version
-# =========================================================
-def ask_question():
-    """Displays the current question and answer options."""
+# Show the current question with 4 answer buttons
+def show_question():
     clear_window()
 
-    q = current_questions[current_index]
-    question_number = current_index + 1
+    q, ans = current_combined[current_index]
 
-    # Shows question number and score
     tk.Label(window,
-             text=f"Question {question_number} of {len(current_questions)}   |   Score: {current_score}",
+             text=f"Question {current_index + 1} of {len(current_combined)}   |   Score: {current_score}",
              font=("Arial", 12)).pack(pady=10)
 
-    # Displays the question text
-    tk.Label(window, text=q["question"],
-             font=("Arial", 14), wraplength=450, justify="left").pack(pady=15)
+    # Show the full question text (includes the options in the string)
+    tk.Label(window, text=q, font=("Arial", 13),
+             justify="left", anchor="w").pack(pady=15, padx=30, fill="x")
 
-    # Buttons for each option (A, B, C, D)
-    for option in q["options"]:
-        letter = option[0]  # Extracts "A", "B", "C", or "D" from the option
-        tk.Button(window, text=option, width=40, height=2,
-                  bg="#4CAF50", fg="white", command=lambda L=letter: check_answer(L)).pack(pady=4)
+    # Four answer buttons (A / B / C / D). The user can ONLY click one of these,
+    # so input validation is automatic.
+    for letter in ["A", "B", "C", "D"]:
+        tk.Button(window, text=letter, width=30, height=2,
+                  command=lambda L=letter: check_answer(L)).pack(pady=3)
 
 
-# =========================================================
-# Replaces the "if user_answer == q["answer"]" block
-# =========================================================
-def check_answer(user_answer):
-    """Checks if the user's selected answer is correct."""
-    global current_index, current_score, current_correct, current_wrong
+def check_answer(user):
+    global current_index, current_score
 
-    q = current_questions[current_index]
+    q, ans = current_combined[current_index]
 
-    # If the answer is correct, increase score and correct count
-    if user_answer == q["answer"]:
+    if user == ans:
         current_score += 1
-        current_correct += 1
-        current_topic_stats[q["topic"]]["correct"] += 1
         messagebox.showinfo("Result", "Correct!")
     else:
-        # If the answer is wrong, deduct marks and increase wrong count
-        current_score -= 0.25
-        current_wrong += 1
-        current_topic_stats[q["topic"]]["wrong"] += 1
-        messagebox.showerror(
-            "Result",
-            f"Wrong! Correct answer is: {q['answer']}"
-        )
+        current_score -= 0.5   # Negative marking (Custom Feature 2 ✅)
+        messagebox.showerror("Result", f"Wrong! Correct answer: {ans}")
 
-    # Move to next question or show results if the quiz is over
+    # Move to next question OR finish the quiz
     current_index += 1
-    if current_index < len(current_questions):
-        ask_question()
+    if current_index < len(current_combined):
+        show_question()
     else:
         finish_quiz()
 
 
-# =========================================================
-# Replaces the "Quiz Completed!" print block
-# =========================================================
 def finish_quiz():
-    """Displays the final score and performance analysis after quiz completion."""
-    global last_score, last_total, last_correct, last_wrong
-    global last_level, last_topic_stats, quiz_attempted
+    global last_score, last_difficulty
 
-    total_questions = len(current_questions)
-    percentage = (current_correct / total_questions) * 100
-    level = get_performance_level(percentage)
-
-    # Save the results for later review
     last_score = current_score
-    last_total = total_questions
-    last_correct = current_correct
-    last_wrong = current_wrong
-    last_level = level
-    last_topic_stats = current_topic_stats
-    quiz_attempted = True
+    last_difficulty = current_difficulty
 
     clear_window()
 
-    tk.Label(window, text="Quiz Completed!",
-             font=("Arial", 18, "bold")).pack(pady=15)
+    tk.Label(window, text="Quiz Finished!",
+             font=("Arial", 18, "bold")).pack(pady=20)
 
-    # Displays the result summary
-    info = (f"Difficulty     : {current_difficulty.capitalize()}\n"
-            f"Correct Answers: {current_correct}\n"
-            f"Wrong Answers  : {current_wrong}\n"
-            f"Final Score    : {current_score} / {total_questions}\n"
-            f"Percentage     : {percentage}%\n"
-            f"Performance    : {level}")
+    tk.Label(window, text=f"Difficulty: {current_difficulty.capitalize()}",
+             font=("Arial", 13)).pack(pady=5)
 
-    tk.Label(window, text=info, font=("Courier", 12),
-             justify="left").pack(pady=10)
+    tk.Label(window, text=f"Your Score: {current_score}",
+             font=("Arial", 14)).pack(pady=10)
 
-    # Back to Menu button
     tk.Button(window, text="Back to Menu", width=25, height=2,
-              bg="#f44336", fg="white", command=show_menu).pack(pady=15)
+              command=show_menu).pack(pady=20)
 
 
-# =========================================================
-# Replaces: view_last_score() console output
-# =========================================================
+# -----------------------------
+# View Last Score
+# -----------------------------
 def view_last_score():
-    """Displays the score of the last quiz attempt."""
     clear_window()
 
-    tk.Label(window, text="Last Quiz Score",
-             font=("Arial", 16, "bold")).pack(pady=15)
+    tk.Label(window, text="Last Score",
+             font=("Arial", 16, "bold")).pack(pady=20)
 
-    if not quiz_attempted:
-        tk.Label(window, text="No quiz attempt found.",
-                 font=("Arial", 12)).pack(pady=20)
+    if last_difficulty == "":
+        tk.Label(window, text="No quiz attempt yet.",
+                 font=("Arial", 13)).pack(pady=10)
     else:
-        percentage = (last_correct / last_total) * 100
-        info = (f"Difficulty Level: {last_level}\n"
-                f"Correct Answers : {last_correct}\n"
-                f"Wrong Answers   : {last_wrong}\n"
-                f"Score           : {last_score} / {last_total}\n"
-                f"Percentage      : {percentage}%")
-        tk.Label(window, text=info, font=("Courier", 12),
-                 justify="left").pack(pady=10)
+        tk.Label(window, text=f"Difficulty: {last_difficulty.capitalize()}",
+                 font=("Arial", 13)).pack(pady=5)
+        tk.Label(window, text=f"Your Last Score: {last_score}",
+                 font=("Arial", 14)).pack(pady=10)
 
     tk.Button(window, text="Back to Menu", width=25, height=2,
-              bg="#f44336", fg="white", command=show_menu).pack(pady=15)
+              command=show_menu).pack(pady=20)
 
 
-# =========================================================
-# Replaces: performance_analysis() console output
-# =========================================================
+# -----------------------------
+# performance_analysis — same thresholds as before
+# -----------------------------
 def performance_analysis():
-    """Displays detailed performance analysis after quiz completion."""
     clear_window()
 
-    tk.Label(window, text="Performance Analysis",
+    tk.Label(window, text="--- Performance Analysis ---",
              font=("Arial", 16, "bold")).pack(pady=15)
 
-    if not quiz_attempted:
-        tk.Label(window, text="No quiz attempt found.\nPlease start the quiz first.",
-                 font=("Arial", 12)).pack(pady=20)
+    if last_difficulty == "":
+        tk.Label(window, text="No quiz attempt yet.\nPlease play a quiz first.",
+                 font=("Arial", 13)).pack(pady=15)
         tk.Button(window, text="Back to Menu", width=25, height=2,
-                  bg="#f44336", fg="white", command=show_menu).pack(pady=15)
+                  command=show_menu).pack(pady=20)
         return
 
-    percentage = (last_correct / last_total) * 100
-    weak_topics = []
-    strong_topics = []
-
-    lines = []
-    lines.append(f"Performance Level: {last_level}")
-    lines.append(f"Percentage       : {percentage}%")
-    lines.append("")
-
-    for topic in last_topic_stats:
-        correct = last_topic_stats[topic]["correct"]
-        wrong = last_topic_stats[topic]["wrong"]
-
-        lines.append(f"Topic  : {topic}")
-        lines.append(f"Correct: {correct}")
-        lines.append(f"Wrong  : {wrong}")
-        lines.append("")
-
-        if wrong > correct:
-            weak_topics.append(topic)
-        elif correct > wrong:
-            strong_topics.append(topic)
-
-    if len(strong_topics) > 0:
-        lines.append("Strong Areas: " + ", ".join(strong_topics))
+    if last_score <= 1:
+        level = "Beginner"
+        feedback = "Practice basic concepts."
+    elif last_score <= 2:
+        level = "Intermediate"
+        feedback = "You're improving, keep going!"
     else:
-        lines.append("Strong Areas: None identified")
+        level = "Advanced"
+        feedback = "Excellent work!"
 
-    if len(weak_topics) > 0:
-        lines.append("Weak Areas  : " + ", ".join(weak_topics))
-    else:
-        lines.append("Weak Areas  : None")
-
-    lines.append("")
-    lines.append("Feedback:")
-    lines.append(get_feedback(last_level, percentage, weak_topics))
-
-    tk.Label(window, text="\n".join(lines), font=("Courier", 11),
-             justify="left").pack(pady=10, padx=20)
+    tk.Label(window, text=f"Difficulty: {last_difficulty.capitalize()}",
+             font=("Arial", 13)).pack(pady=5)
+    tk.Label(window, text=f"Level: {level}",
+             font=("Arial", 14, "bold")).pack(pady=8)
+    tk.Label(window, text=f"Feedback: {feedback}",
+             font=("Arial", 12), wraplength=450).pack(pady=8)
 
     tk.Button(window, text="Back to Menu", width=25, height=2,
-              bg="#f44336", fg="white", command=show_menu).pack(pady=15)
+              command=show_menu).pack(pady=20)
 
 
 # -----------------------------
 # Start the app
 # -----------------------------
-window = tk.Tk()  # Create the main window for the quiz app
-window.title("Smart Quiz & Performance Analyzer")  # Set the title of the window
-window.geometry("550x600")  # Set the window size (width x height)
+window = tk.Tk()                        # create the main window
+window.title("Quiz System")             # title bar text
+window.geometry("550x550")              # window size (width x height)
 
-show_menu()  # Display the main menu when the app starts
-window.mainloop()  # Start the Tkinter main loop (this keeps the app running)
+show_menu()                             # draw the first screen
+window.mainloop()                       # keep the window open and handle clicks
