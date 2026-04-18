@@ -1,19 +1,19 @@
-import tkinter as tk
-from tkinter import messagebox
+import tkinter as tk  # Import Tkinter library for creating the GUI
+from tkinter import messagebox  # Import messagebox to show pop-up messages (like correct or incorrect answers)
 
 # -----------------------------
-# Question Bank
+# Question Bank (Contains all questions and options)
 # -----------------------------
 question_bank = {
     "easy": [
         {
-            "question": "What is the capital of France?",
-            "options": ["A. Berlin", "B. Paris", "C. Madrid", "D. Rome"],
-            "answer": "B",
-            "topic": "Geography"
+            "question": "What is the capital of France?",  # The question text
+            "options": ["A. Berlin", "B. Paris", "C. Madrid", "D. Rome"],  # List of answer choices
+            "answer": "B",  # The correct answer
+            "topic": "Geography"  # Topic of the question
         },
         {
-            "question": "Which number is even?",
+            "question": "Which number is even?",  # Another question
             "options": ["A. 7", "B. 9", "C. 12", "D. 15"],
             "answer": "C",
             "topic": "Math"
@@ -70,36 +70,38 @@ question_bank = {
 # -----------------------------
 # Global Tracking Variables
 # -----------------------------
-last_score = -1
-last_total = 0
-last_correct = 0
-last_wrong = 0
-last_level = ""
-last_topic_stats = {}
-quiz_attempted = False
+last_score = -1  # Stores the last score
+last_total = 0  # Stores total number of questions in the last quiz
+last_correct = 0  # Stores the number of correct answers
+last_wrong = 0  # Stores the number of incorrect answers
+last_level = ""  # Stores the user's performance level (Beginner, Intermediate, Advanced)
+last_topic_stats = {}  # Stores statistics about each topic (correct and incorrect answers)
+quiz_attempted = False  # Boolean to check if the user has attempted the quiz
 
-# These hold the current quiz while it's running
-current_questions = []
-current_index = 0
-current_score = 0
-current_correct = 0
-current_wrong = 0
-current_topic_stats = {}
-current_difficulty = ""
+# These variables store the current quiz's data while it is being taken
+current_questions = []  # List of questions for the current quiz
+current_index = 0  # Keeps track of which question the user is on
+current_score = 0  # Keeps track of the user's score
+current_correct = 0  # Tracks correct answers
+current_wrong = 0  # Tracks incorrect answers
+current_topic_stats = {}  # Tracks statistics for each topic in the quiz
+current_difficulty = ""  # Stores the difficulty level of the current quiz (easy, medium, hard)
 
 # -----------------------------
 # Helper Functions (unchanged)
 # -----------------------------
 def get_performance_level(percentage):
-    if percentage >= 80:
+    """Classifies performance based on score percentage."""
+    if percentage >= 80:  # If the score is 80% or above, the performance level is "Advanced"
         return "Advanced"
-    elif percentage >= 50:
+    elif percentage >= 50:  # If the score is between 50% and 79%, the performance level is "Intermediate"
         return "Intermediate"
-    else:
+    else:  # If the score is below 50%, the performance level is "Beginner"
         return "Beginner"
 
 
 def get_feedback(level, percentage, weak_topics):
+    """Generates feedback based on the performance level and weak topics."""
     if level == "Advanced":
         message = "Excellent work! You have a strong understanding of the quiz topics."
     elif level == "Intermediate":
@@ -108,12 +110,12 @@ def get_feedback(level, percentage, weak_topics):
         message = "You need more practice. Focus on basics and revise weak areas."
 
     if len(weak_topics) > 0:
-        message += "\nWeak areas: " + ", ".join(weak_topics)
+        message += "\nWeak areas: " + ", ".join(weak_topics)  # Lists weak topics
 
     if percentage == 100:
-        message += "\nPerfect score. Outstanding performance!"
+        message += "\nPerfect score. Outstanding performance!"  # If the user gets a perfect score
     elif percentage < 40:
-        message += "\nSuggestion: Practice easier questions first and build confidence."
+        message += "\nSuggestion: Practice easier questions first and build confidence."  # If the score is low
 
     return message
 
@@ -122,19 +124,23 @@ def get_feedback(level, percentage, weak_topics):
 # Helper: clear the window before showing a new screen
 # -----------------------------
 def clear_window():
+    """Clears all widgets from the Tkinter window."""
     for widget in window.winfo_children():
-        widget.destroy()
+        widget.destroy()  # Destroys each widget (label, button, etc.) in the current window
 
 
 # =========================================================
 # SCREEN: Main Menu  (replaces the console main menu)
 # =========================================================
 def show_menu():
+    """Displays the main menu with options to start quiz, view last score, and analyze performance."""
     clear_window()
 
+    # Title of the app
     tk.Label(window, text="Smart Quiz & Performance Analyzer",
              font=("Arial", 16, "bold")).pack(pady=20)
 
+    # Buttons for the main menu
     tk.Button(window, text="1. Start Quiz", width=30, height=2,
               bg="#4CAF50", fg="white", command=choose_difficulty).pack(pady=5)
 
@@ -152,11 +158,13 @@ def show_menu():
 # SCREEN: Choose Difficulty  (replaces choose_difficulty console prompt)
 # =========================================================
 def choose_difficulty():
+    """Displays the difficulty level selection screen."""
     clear_window()
 
     tk.Label(window, text="Select Difficulty Level",
              font=("Arial", 16, "bold")).pack(pady=20)
 
+    # Buttons to select difficulty level
     tk.Button(window, text="1. Easy", width=30, height=2,
               bg="#4CAF50", fg="white", command=lambda: start_quiz("easy")).pack(pady=5)
 
@@ -166,6 +174,7 @@ def choose_difficulty():
     tk.Button(window, text="3. Hard", width=30, height=2,
               bg="#FF9800", fg="black", command=lambda: start_quiz("hard")).pack(pady=5)
 
+    # Button to return to the main menu
     tk.Button(window, text="Back to Menu", width=30,
               bg="#f44336", fg="white", command=show_menu).pack(pady=15)
 
@@ -174,6 +183,7 @@ def choose_difficulty():
 # Core Feature: start_quiz  (same logic, just uses windows)
 # =========================================================
 def start_quiz(difficulty):
+    """Starts the quiz based on the chosen difficulty."""
     global current_questions, current_index, current_score
     global current_correct, current_wrong, current_topic_stats, current_difficulty
 
@@ -198,21 +208,24 @@ def start_quiz(difficulty):
 # Replaces: ask_question() from the console version
 # =========================================================
 def ask_question():
+    """Displays the current question and answer options."""
     clear_window()
 
     q = current_questions[current_index]
     question_number = current_index + 1
 
+    # Shows question number and score
     tk.Label(window,
              text=f"Question {question_number} of {len(current_questions)}   |   Score: {current_score}",
              font=("Arial", 12)).pack(pady=10)
 
+    # Displays the question text
     tk.Label(window, text=q["question"],
              font=("Arial", 14), wraplength=450, justify="left").pack(pady=15)
 
-    # Four option buttons (one per A/B/C/D)
+    # Buttons for each option (A, B, C, D)
     for option in q["options"]:
-        letter = option[0]   # "A", "B", "C", or "D"
+        letter = option[0]  # Extracts "A", "B", "C", or "D" from the option
         tk.Button(window, text=option, width=40, height=2,
                   bg="#4CAF50", fg="white", command=lambda L=letter: check_answer(L)).pack(pady=4)
 
@@ -221,16 +234,19 @@ def ask_question():
 # Replaces the "if user_answer == q["answer"]" block
 # =========================================================
 def check_answer(user_answer):
+    """Checks if the user's selected answer is correct."""
     global current_index, current_score, current_correct, current_wrong
 
     q = current_questions[current_index]
 
+    # If the answer is correct, increase score and correct count
     if user_answer == q["answer"]:
         current_score += 1
         current_correct += 1
         current_topic_stats[q["topic"]]["correct"] += 1
         messagebox.showinfo("Result", "Correct!")
     else:
+        # If the answer is wrong, deduct marks and increase wrong count
         current_score -= 0.25
         current_wrong += 1
         current_topic_stats[q["topic"]]["wrong"] += 1
@@ -239,7 +255,7 @@ def check_answer(user_answer):
             f"Wrong! Correct answer is: {q['answer']}"
         )
 
-    # Move to next question or show results
+    # Move to next question or show results if the quiz is over
     current_index += 1
     if current_index < len(current_questions):
         ask_question()
@@ -251,6 +267,7 @@ def check_answer(user_answer):
 # Replaces the "Quiz Completed!" print block
 # =========================================================
 def finish_quiz():
+    """Displays the final score and performance analysis after quiz completion."""
     global last_score, last_total, last_correct, last_wrong
     global last_level, last_topic_stats, quiz_attempted
 
@@ -258,7 +275,7 @@ def finish_quiz():
     percentage = (current_correct / total_questions) * 100
     level = get_performance_level(percentage)
 
-    # Save last result  (same as original)
+    # Save the results for later review
     last_score = current_score
     last_total = total_questions
     last_correct = current_correct
@@ -272,6 +289,7 @@ def finish_quiz():
     tk.Label(window, text="Quiz Completed!",
              font=("Arial", 18, "bold")).pack(pady=15)
 
+    # Displays the result summary
     info = (f"Difficulty     : {current_difficulty.capitalize()}\n"
             f"Correct Answers: {current_correct}\n"
             f"Wrong Answers  : {current_wrong}\n"
@@ -282,6 +300,7 @@ def finish_quiz():
     tk.Label(window, text=info, font=("Courier", 12),
              justify="left").pack(pady=10)
 
+    # Back to Menu button
     tk.Button(window, text="Back to Menu", width=25, height=2,
               bg="#f44336", fg="white", command=show_menu).pack(pady=15)
 
@@ -290,6 +309,7 @@ def finish_quiz():
 # Replaces: view_last_score() console output
 # =========================================================
 def view_last_score():
+    """Displays the score of the last quiz attempt."""
     clear_window()
 
     tk.Label(window, text="Last Quiz Score",
@@ -316,6 +336,7 @@ def view_last_score():
 # Replaces: performance_analysis() console output
 # =========================================================
 def performance_analysis():
+    """Displays detailed performance analysis after quiz completion."""
     clear_window()
 
     tk.Label(window, text="Performance Analysis",
@@ -375,9 +396,9 @@ def performance_analysis():
 # -----------------------------
 # Start the app
 # -----------------------------
-window = tk.Tk()
-window.title("Smart Quiz & Performance Analyzer")
-window.geometry("550x600")
+window = tk.Tk()  # Create the main window for the quiz app
+window.title("Smart Quiz & Performance Analyzer")  # Set the title of the window
+window.geometry("550x600")  # Set the window size (width x height)
 
-show_menu()
-window.mainloop()
+show_menu()  # Display the main menu when the app starts
+window.mainloop()  # Start the Tkinter main loop (this keeps the app running)
